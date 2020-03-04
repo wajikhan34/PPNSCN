@@ -151,7 +151,6 @@ namespace PPNSCN
             //I am assuming all passports will certainly expire this century
             return new DateTime(int.Parse(DateTime.Now.Year.ToString().Substring(0, 2) + mrz.Substring(22 + 44, 2)), int.Parse(mrz.Substring(24 + 44, 2)),
                 int.Parse(mrz.Substring(26 + 44, 2)));
-
         }
 
         private void ScanApp_Click(object sender, EventArgs e)
