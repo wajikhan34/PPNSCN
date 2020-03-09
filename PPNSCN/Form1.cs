@@ -22,7 +22,7 @@ namespace PPNSCN
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            this.statusBar.Location = new Point(441, 291);
+            this.statusBar.Location = new Point(387, 466);
             this.statusBar.Size = new System.Drawing.Size(217, 92);
             this.statusBar.Image = Resources.guide;
             this.statusBar.Refresh();
@@ -34,7 +34,7 @@ namespace PPNSCN
 
             try
             {
-                this.statusBar.Location = new Point(494, 292);
+                this.statusBar.Location = new Point(387, 466);
                 this.statusBar.Size = new System.Drawing.Size(82, 92);
                 this.statusBar.Image = Resources.wait;
                 this.statusBar.Refresh();
@@ -44,12 +44,14 @@ namespace PPNSCN
                 var pphoto = directory.GetFiles().Where(x => x.Name.Contains("IMAGEPHOTO"))
              .OrderByDescending(f => f.LastWriteTime)
              .First();
-                personphoto.Image = Image.FromFile(pphoto.FullName);
+                personphoto.Image = GetCopyOfImage(pphoto.FullName);
 
                 var passportpic = directory.GetFiles().Where(x => x.Name.Contains("IMAGEVIS"))
              .OrderByDescending(f => f.LastWriteTime)
              .First();
-                passportphoto.Image = Image.FromFile(passportpic.FullName);
+
+                passportphotos.Image = GetCopyOfImage(passportpic.FullName);
+
 
                 var MRZ = directory.GetFiles().Where(x => x.Name.Contains("CODELINE"))
                                 .OrderByDescending(f => f.LastWriteTime)
@@ -81,22 +83,22 @@ namespace PPNSCN
                     var json = System.Text.Encoding.UTF8.GetString(Resources.ISOCountryCode);
                     var GetParseJsonArray = JsonConvert.DeserializeObject<List<JsonParserISOCountry>>(json).Where(x => x.threecode.Equals(Regex.Replace(Nationality, @"[\d-]", string.Empty))).FirstOrDefault();
                     this.nationality.Text = GetParseJsonArray != null ? GetParseJsonArray.Key : Regex.Replace(Nationality, @"[\d-]", string.Empty);
-                    this.statusBar.Location = new Point(479, 274);
-                    this.statusBar.Size = new System.Drawing.Size(144, 138);
+                    this.statusBar.Location = new Point(387, 460);
+                    this.statusBar.Size = new System.Drawing.Size(120, 110);
                     this.statusBar.Image = Resources.success;
                     this.statusBar.Refresh();
                     System.Threading.Thread.Sleep(1000);
                 }
                 else
                 {
-                    this.statusBar.Location = new Point(479, 274);
-                    this.statusBar.Size = new System.Drawing.Size(144, 138);
+                    this.statusBar.Location = new Point(387, 460);
+                    this.statusBar.Size = new System.Drawing.Size(120, 110);
                     this.statusBar.Image = Resources.cross;
                     this.statusBar.Refresh();
                     personphoto.Image = null;
                     this.personphoto.Refresh();
-                    passportphoto.Image = null;
-                    this.passportphoto.Refresh();
+                    passportphotos.Image = null;
+                    this.passportphotos.Refresh();
 
                     this.passportnumber.Text = "";
                     this.firstname.Text = "";
@@ -112,14 +114,14 @@ namespace PPNSCN
             }
             catch (Exception ex)
             {
-                this.statusBar.Location = new Point(479, 274);
-                this.statusBar.Size = new System.Drawing.Size(144, 138);
+                this.statusBar.Location = new Point(387, 460);
+                this.statusBar.Size = new System.Drawing.Size(120, 110);
                 this.statusBar.Image = Resources.cross;
                 this.statusBar.Refresh();
                 personphoto.Image = null;
                 this.personphoto.Refresh();
-                passportphoto.Image = null;
-                this.passportphoto.Refresh();
+                passportphotos.Image = null;
+                this.passportphotos.Refresh();
 
                 this.passportnumber.Text = "";
                 this.firstname.Text = "";
@@ -160,7 +162,46 @@ namespace PPNSCN
             ProcessStartInfo startInfo = new ProcessStartInfo();
             startInfo.FileName = workingDirectory + "\\Scan\\OCR640.exe";
             startInfo.Arguments = "header.h";
+          //  startInfo.WindowStyle = ProcessWindowStyle.Hidden;
             Process.Start(startInfo);
+        }
+
+        private void SignationApp(object sender, EventArgs e)
+        {
+            string workingDirectory = Environment.CurrentDirectory;
+            //  string startupPath = Directory.GetParent(workingDirectory).Parent.FullName;
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.FileName = workingDirectory + "\\Signature\\Signature_Pad_By_Onpro.exe";
+            startInfo.Arguments = "header.h";
+          //  startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            Process.Start(startInfo);
+        }
+
+        private Image GetCopyOfImage(string path)
+        {
+            Image image;
+            using (FileStream myStream = new FileStream(path, FileMode.Open))
+            {
+                image = Image.FromStream(myStream);
+            }
+          
+            return image;
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void GetSignature_Click(object sender, EventArgs e)
+        {
+            var directory = new DirectoryInfo("C:\\HajOnSoft");
+            var signaturepic = directory.GetFiles().Where(x => x.Name.Contains("Signature"))
+                .OrderByDescending(f => f.LastWriteTime)
+                .First();
+
+            SignatureBox.Image = GetCopyOfImage(signaturepic.FullName);
+
         }
     }
 }
