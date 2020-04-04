@@ -1,14 +1,19 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using PPNSCN.Model;
 using PPNSCN.Properties;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 
@@ -16,8 +21,27 @@ namespace PPNSCN
 {
     public partial class Form1 : Form
     {
-        private Image PassportPerson { get; set; }
+        public class SaveDataModel
+        {
+            public string DocumentNumber { get; set; }
+            public string FirstName { get; set; }
+            public string LastName { get; set; }
+            public string DOB { get; set; }
+            public string Gender { get; set; }
+            public string IssuingCountry { get; set; }
+            public string Nationality { get; set; }
+            public string ExpiryDate { get; set; }
+            public List<ImageAttachment> ImageAttachments { get; set; }
+        }
 
+        public class ImageAttachment
+        {
+            public string FileName { get; set; }
+            public string Attachment { get; set; }
+            public string DocumentType { get; set; }
+            public string Page { get; set; }
+        }
+        private Image PassportPerson { get; set; }
         private Image PassportPage1 { get; set; }
         private Image PassportPage2 { get; set; }
         private Image EmiratedIdFront { get; set; }
@@ -27,7 +51,10 @@ namespace PPNSCN
         private Image DrivingLicenseBack { get; set; }
         private Image SignatureImage { get; set; }
 
-        private const string ImageSaveDestination = @"D:\TestData\";
+        private string ImageSaveDestination = ConfigurationManager.AppSettings["DataSaveToLocal"];
+
+        private string ApiURl = ConfigurationManager.AppSettings["ApiURl"];
+
         public Form1()
         {
             InitializeComponent();
@@ -103,25 +130,7 @@ namespace PPNSCN
             }
 
 
-        }
-
-        private DateTime DateOfBirth(string mrz)
-        {
-            var dob = new DateTime(int.Parse(DateTime.Now.Year.ToString().Substring(0, 2) + mrz.Substring(14 + 44, 2)), int.Parse(mrz.Substring(16 + 44, 2)),
-                    int.Parse(mrz.Substring(18 + 44, 2)));
-
-            if (dob < DateTime.Now)
-                return dob;
-
-            return dob.AddYears(-100); //Subtract a century
-
-        }
-        private DateTime ExpireDate(string mrz)
-        {
-            //I am assuming all passports will certainly expire this century
-            return new DateTime(int.Parse(DateTime.Now.Year.ToString().Substring(0, 2) + mrz.Substring(22 + 44, 2)), int.Parse(mrz.Substring(24 + 44, 2)),
-                int.Parse(mrz.Substring(26 + 44, 2)));
-        }
+        } 
 
         private void ScanApp_Click(object sender, EventArgs e)
         {
@@ -161,44 +170,32 @@ namespace PPNSCN
 
         }
 
-    
-
-        //private void passportphotos_Click(object sender, EventArgs e)
-        //{
-        //    var directory = new DirectoryInfo("C:\\HajOnSoft");
-        //    Process.Start(directory.GetFiles().Where(x => x.Name.Contains("IMAGEVIS"))
-        //     .OrderByDescending(f => f.LastWriteTime)
-        //     .First().FullName);
-        //}
-
-        //private void personphoto_Click(object sender, EventArgs e)
-        //{
-        //    var directory = new DirectoryInfo("C:\\HajOnSoft");
-        //    Process.Start(directory.GetFiles().Where(x => x.Name.Contains("IMAGEPHOTO"))
-        //     .OrderByDescending(f => f.LastWriteTime)
-        //     .First().FullName);
-        //}
-
         private void saveDataBtn_Click(object sender, EventArgs e)
         {
+            List<ImageAttachment> AttachmentData = new List<ImageAttachment>();
             if (PassportPerson != null)
-                SaveAs(PassportPerson, ImageSaveDestination + this.passportnumber.Text, "Face.jpg");
+                SaveAs(PassportPerson, ImageSaveDestination + this.passportnumber.Text, "Face.jpg", ref AttachmentData, "Face", "passport");
             if (PassportPage1 != null)
-                SaveAs(PassportPage1, ImageSaveDestination + this.passportnumber.Text, "PassportFrontPage.jpg");
-            if (PassportPerson != null)
-                SaveAs(PassportPage2, ImageSaveDestination + this.passportnumber.Text, "PassportBackPage.jpg");
+                SaveAs(PassportPage1, ImageSaveDestination + this.passportnumber.Text, "PassportFrontPage.jpg", ref AttachmentData, "Page1", "passport");
+            if (PassportPage2 != null)
+                SaveAs(PassportPage2, ImageSaveDestination + this.passportnumber.Text, "PassportBackPage.jpg", ref AttachmentData, "Page2", "passport");
             if (EmiratedIdFront != null)
-                SaveAs(EmiratedIdFront, ImageSaveDestination + this.passportnumber.Text, "EmiratesIdFrontPage.jpg");
+                SaveAs(EmiratedIdFront, ImageSaveDestination + this.passportnumber.Text, "EmiratesIdFrontPage.jpg", ref AttachmentData, "Front", "emirates_id");
             if (EmiratedIdBack != null)
-                SaveAs(EmiratedIdBack, ImageSaveDestination + this.passportnumber.Text, "EmiratesIdBackPage.jpg");
+                SaveAs(EmiratedIdBack, ImageSaveDestination + this.passportnumber.Text, "EmiratesIdBackPage.jpg", ref AttachmentData, "Back", "emirates_id");
             if (ResidencePermit != null)
-                SaveAs(ResidencePermit, ImageSaveDestination + this.passportnumber.Text, "ResidencePermit.jpg");
+                SaveAs(ResidencePermit, ImageSaveDestination + this.passportnumber.Text, "ResidencePermit.jpg", ref AttachmentData, "Front", "residence_permit");
             if (DrivingLicenseFront != null)
-                SaveAs(DrivingLicenseFront, ImageSaveDestination + this.passportnumber.Text, "DrivingLicenseFront.jpg");
+                SaveAs(DrivingLicenseFront, ImageSaveDestination + this.passportnumber.Text, "DrivingLicenseFront.jpg", ref AttachmentData, "Front", "driving_license");
             if (DrivingLicenseBack != null)
-                SaveAs(DrivingLicenseBack, ImageSaveDestination + this.passportnumber.Text, "DrivingLicenseBack.jpg");
+                SaveAs(DrivingLicenseBack, ImageSaveDestination + this.passportnumber.Text, "DrivingLicenseBack.jpg", ref AttachmentData, "Back", "driving_license");
             if (SignatureImage != null)
-                SaveAs(SignatureImage, ImageSaveDestination + this.passportnumber.Text, "SignatureImage.jpg");
+                SaveAs(SignatureImage, ImageSaveDestination + this.passportnumber.Text, "SignatureImage.jpg", ref AttachmentData, "Page1", "signature");
+
+            if (PostData(ApiURl, AttachmentData))
+                MessageBox.Show("Successfully Saved!", "Alert");
+            else
+                MessageBox.Show("Error While Saving Data", "Alert");
         }
 
         private void SaveCurrentDocument_Click(object sender, EventArgs e)
@@ -215,7 +212,7 @@ namespace PPNSCN
                         SignatureImage = GetCopyOfImage(signaturepic.FullName);
                         signaturebox.Image = SignatureImage;
                         break;
-                        
+
                     case "Passport":
                         switch (this.DocumentTypeCombo.SelectedItem)
                         {
@@ -360,7 +357,7 @@ namespace PPNSCN
                 case "Signature":
                     this.DocumentTypeCombo.Text = "";
                     this.DocumentTypeCombo.Items.Clear();
-                    this.DocumentTypeCombo.Items.AddRange(new object[] { "Signature"});
+                    this.DocumentTypeCombo.Items.AddRange(new object[] { "Signature" });
                     this.signaturebtn.Visible = true;
                     break;
 
@@ -432,13 +429,90 @@ namespace PPNSCN
             this.dl2.BackColor = Color.Red;
         }
 
-        private void SaveAs(Image FileUpload, string appPath, string Filename)
+        private void SaveAs(Image FileUpload, string appPath, string Filename, ref List<ImageAttachment> AttachmentData, string page, string doctype)
         {
             if (!Directory.Exists(appPath))
                 Directory.CreateDirectory(appPath);
             if (System.IO.File.Exists(appPath + "\\" + Filename))
                 System.IO.File.Delete(appPath + "\\" + Filename);
             new Bitmap(FileUpload).Save(appPath + "\\" + Filename, ImageFormat.Jpeg);
+            AttachmentData.Add(new ImageAttachment() { Attachment = GetBase64(FileUpload), FileName = Filename, DocumentType = doctype, Page = page });
+        }
+
+        private bool PostData(string apiurl, List<ImageAttachment> AttachmentData)
+        {
+            bool data = false;
+            try
+            {
+                HttpWebRequest webrequest = (HttpWebRequest)WebRequest.Create(apiurl);
+                webrequest.Method = "POST";
+                webrequest.ContentType = "application/json";
+                webrequest.ContentLength = 0;
+                var datatosave = new SaveDataModel()
+                {
+                    DOB = dob.Text,
+                    DocumentNumber = passportnumber.Text,
+                    ExpiryDate = expirydate.Text,
+                    IssuingCountry = IssueCountry.Text,
+                    FirstName = firstname.Text,
+                    LastName = lastname.Text,
+                    Gender = gender.Text,
+                    Nationality = nationality.Text,
+                    ImageAttachments = AttachmentData
+                };
+                var json = JsonConvert.SerializeObject(datatosave);
+                webrequest.ContentLength = json.Length;
+                using (var streamWriter = new StreamWriter(webrequest.GetRequestStream()))
+                {
+                    streamWriter.Write(json);
+                }
+                HttpWebResponse webresponse = (HttpWebResponse)webrequest.GetResponse();
+                Encoding enc = System.Text.Encoding.GetEncoding("utf-8");
+                StreamReader responseStream = new StreamReader(webresponse.GetResponseStream(), enc);
+                string result = string.Empty;
+                result = responseStream.ReadToEnd();
+                webresponse.Close();
+                data = (bool)JsonConvert.DeserializeObject(result);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Saving Error!");
+                return false;
+            }
+            return data;
+        }
+
+        public string GetBase64(Image image)
+        {
+            using (MemoryStream m = new MemoryStream())
+            {
+                var i = image;
+
+                var i2 = new Bitmap(i);
+                i2.Save(m, ImageFormat.Jpeg);
+                byte[] imageBytes = m.ToArray();
+                string base64String = Convert.ToBase64String(imageBytes);
+                return base64String;
+            }
+        }
+
+        private DateTime DateOfBirth(string mrz)
+        {
+            var dob = new DateTime(int.Parse(DateTime.Now.Year.ToString().Substring(0, 2) + mrz.Substring(14 + 44, 2)), int.Parse(mrz.Substring(16 + 44, 2)),
+                    int.Parse(mrz.Substring(18 + 44, 2)));
+
+            if (dob < DateTime.Now)
+                return dob;
+
+            return dob.AddYears(-100); //Subtract a century
+
+        }
+
+        private DateTime ExpireDate(string mrz)
+        {
+            //I am assuming all passports will certainly expire this century
+            return new DateTime(int.Parse(DateTime.Now.Year.ToString().Substring(0, 2) + mrz.Substring(22 + 44, 2)), int.Parse(mrz.Substring(24 + 44, 2)),
+                int.Parse(mrz.Substring(26 + 44, 2)));
         }
 
     }
